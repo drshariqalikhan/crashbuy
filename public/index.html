@@ -22,6 +22,10 @@
     <!-- Satellite Page -->
     <div id="page-sat" class="page-view is-active">
         <div class="card" style="border-color: var(--sky);">
+            <div class="card-header-row">
+                <span class="bucket-label text-sky">Satellite Allocation</span>
+                <button class="btn-clear" onclick="clearChecks('sat')">Clear Checks</button>
+            </div>
             <div class="grid-2">
                 <div>
                     <label>Satellite Cash Available ($)</label>
@@ -32,6 +36,16 @@
                     <input class="input text-sky" type="number" id="sat-drop" min="0" max="100" step="0.5" oninput="update('sat')">
                 </div>
             </div>
+            <div class="summary-bar">
+                <div class="stat-box">
+                    <div class="stat-label">Deployed (Checked)</div>
+                    <div class="stat-value text-muted" id="sat-deployed">$0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Remaining Cash</div>
+                    <div class="stat-value text-sky" id="sat-remaining">$0</div>
+                </div>
+            </div>
         </div>
 
         <div class="card" style="padding: 0.5rem 1rem;">
@@ -39,6 +53,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th class="text-center" style="width: 44px;">Done</th>
                             <th>Drop</th>
                             <th>Target %</th>
                             <th class="text-right">Deploy Now</th>
@@ -54,6 +69,10 @@
     <!-- Core Page -->
     <div id="page-core" class="page-view">
         <div class="card" style="border-color: var(--emerald);">
+            <div class="card-header-row">
+                <span class="bucket-label text-emerald">Core Allocation</span>
+                <button class="btn-clear" onclick="clearChecks('core')">Clear Checks</button>
+            </div>
             <div class="grid-2">
                 <div>
                     <label>Core Cash Available ($)</label>
@@ -64,6 +83,16 @@
                     <input class="input text-emerald" type="number" id="core-drop" min="0" max="100" step="0.5" oninput="update('core')">
                 </div>
             </div>
+            <div class="summary-bar">
+                <div class="stat-box">
+                    <div class="stat-label">Deployed (Checked)</div>
+                    <div class="stat-value text-muted" id="core-deployed">$0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Remaining Cash</div>
+                    <div class="stat-value text-emerald" id="core-remaining">$0</div>
+                </div>
+            </div>
         </div>
 
         <div class="card" style="padding: 0.5rem 1rem;">
@@ -71,6 +100,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th class="text-center" style="width: 44px;">Done</th>
                             <th>Drop</th>
                             <th>Target %</th>
                             <th class="text-right">Deploy Now</th>
