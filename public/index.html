@@ -192,3 +192,125 @@
         document.querySelectorAll('.page-view').forEach(el => el.classList.remove('is-active'));
         document.getElementById('page-' + page).classList.add('is-active');
 
+const btnSat = document.getElementById('tab-sat');
+const btnCore = document.getElementById('tab-core');
+btnSat.className = 'nav-btn' + (page === 'sat' ? ' active-sat' : '');
+btnCore.className = 'nav-btn' + (page === 'core' ? ' active-core' : '');
+}
+async function checkRegime() {
+const btn = document.getElementById('check-btn');
+const telemetry = document.getElementById('vt-telemetry');
+btn.classList.add('is-loading');
+try {
+const res = await fetch('/api/regime');
+const data = await res.json();
+if (!res.ok) {
+telemetry.textContent = Error: ${data.error};
+return;
+}
+latestMarketData = data;
+telemetry.textContent = VT: $${data.price} | ATH: $${data.ath} (-${data.drop_from_ath}%);
+// Latch Satellite if condition is met and not already latched
+if (data.satellite_triggered && !state.sat.triggered) {
+state.sat.triggered = true;
+state.sat.lockedDrop = data.drop_from_ath;
+state.sat.triggeredAt = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+// Latch Core if all 3 conditions are met and not already latched
+if (data.core_triggered && !state.core.triggered) {
+state.core.triggered = true;
+state.core.lockedDrop = data.drop_from_ath;
+state.core.triggeredAt = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+save();
+updateDiagnostics(data);
+renderSheets();
+} catch (err) {
+telemetry.textContent = 'Backend unreachable — offline mode';
+} finally {
+btn.classList.remove('is-loading');
+}
+}
+function updateDiagnostics(data) {
+const s = data.smas;
+const c = data.conditions;
+const c1 = c.sma10_below_20
+? <span class="badge-ok">✔ MET</span>
+: <span class="badge-wait">✖ WAITING</span>;
+const c2 = c.sma30_below_50
+? <span class="badge-ok">✔ MET</span>
+: <span class="badge-wait">✖ WAITING</span>;
+const c3 = c.sma15_down_slope
+? <span class="badge-ok">✔ MET</span>
+: <span class="badge-wait">✖ WAITING</span>;
+document.getElementById('sat-diag').innerHTML = <p class="mb-1">${c1} &nbsp; <strong>10W SMA ($${s.sma10}) &lt; 20W SMA ($${s.sma20})</strong></p> <p class="has-text-grey mt-2">Current VT Drawdown from ATH: <strong>-${data.drop_from_ath}%</strong></p>;
+document.getElementById('core-diag').innerHTML = <p class="mb-2">${c1} &nbsp; <strong>10W SMA ($${s.sma10}) &lt; 20W SMA ($${s.sma20})</strong></p> <p class="mb-2">${c2} &nbsp; <strong>30W SMA ($${s.sma30}) &lt; 50W SMA ($${s.sma50})</strong></p> <p class="mb-1">${c3} &nbsp; <strong>15W SMA Sloping Down ($${s.sma15_curr} vs prev $${s.sma15_prev})</strong></p> <p class="has-text-grey mt-2">Current VT Drawdown from ATH: <strong>-${data.drop_from_ath}%</strong></p>;
+}
+function manualTrigger(bucket) {
+const dropVal = latestMarketData ? latestMarketData.drop_from_ath : 0;
+state[bucket].triggered = true;
+state[bucket].lockedDrop = dropVal;
+state[bucket].triggeredAt = 'Manual Override (' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ')';
+save();
+renderSheets();
+}
+function resetSheet(bucket) {
+if (!confirm(Reset the ${bucket.toUpperCase()} dip-buying sheet and clear its locked drop %?)) return;
+state[bucket].triggered = false;
+state[bucket].lockedDrop = 0;
+state[bucket].triggeredAt = null;
+save();
+renderSheets();
+}
+function updateCash(bucket) {
+state[bucket].cash = parseFloat(document.getElementById(${bucket}-cash).value) || 0;
+save();
+drawTable(bucket);
+}
+function calc(d) {
+return d < 27 ? d + 10 : (2.75 * d) - 25.64;
+}
+function fmt(num) {
+return '$' + num.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+function renderSheets() {
+['sat', 'core'].forEach(bucket => {
+const isTriggered = state[bucket].triggered;
+document.getElementById(${bucket}-locked).style.display = isTriggered ? 'none' : 'block';
+document.getElementById(${bucket}-active).style.display = isTriggered ? 'block' : 'none';
+if (isTriggered) {
+document.getElementById(${bucket}-drop).value = state[bucket].lockedDrop;
+document.getElementById(${bucket}-trigger-date).textContent =
+Triggered: ${state[bucket].triggeredAt} at -${state[bucket].lockedDrop}% from ATH;
+drawTable(bucket);
+}
+});
+}
+function drawTable(bucket) {
+const tbody = document.getElementById(${bucket}-out);
+tbody.innerHTML = '';
+const startDrop = state[bucket].lockedDrop;
+const cash = state[bucket].cash;
+let prevTarget = 0;
+let target = 0;
+let i = 0;
+while (target < 100 && i < 40) {
+const curDrop = parseFloat((startDrop + (i * 2)).toFixed(1));
+target = Math.min(100, calc(curDrop));
+const incrementPct = target - prevTarget;
+const deployNow = (incrementPct / 100) * cash;
+const cumulative = (target / 100) * cash;
+if (deployNow >= 0) {
+tbody.innerHTML += `
+-${curDrop}%
+${target.toFixed(1)}%
+${fmt(deployNow)}
+${fmt(cumulative)}
+`;
+}
+prevTarget = target;
+i++;
+}
+}
+loadState();
+
